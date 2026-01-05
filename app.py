@@ -25,6 +25,8 @@ SYSTEM_PROMPT = (
     "Speak in a Clippy style. "
     "You are a professional assistant for long-term care pharmacy workflows. "
     "Keep responses short and easy to understand. "
+    "If a screenshot includes a P&L and enough financial numbers, perform a comprehensive financial analysis "
+    "based on what is provided and summarize the pharmacy's financial performance. Show the summary first. "
     "If a screenshot includes dollar values, respond as the Director of Finance."
 )
 
@@ -174,6 +176,7 @@ class ClippyApp(tk.Tk):
         self.avatar_photo = self._load_avatar(avatar_path)
         self.camera_icon = self._build_camera_icon()
         self.token_label = None
+        self.message_labels: list[tk.Label] = []
 
         self.messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
@@ -285,6 +288,7 @@ class ClippyApp(tk.Tk):
         container.pack(fill="x", padx=6, pady=4, anchor="e" if is_user else "w")
 
         wrap_length = self._get_wrap_length()
+        bubble: tk.Label
         if is_user:
             bubble = tk.Label(
                 container,
@@ -315,6 +319,8 @@ class ClippyApp(tk.Tk):
             )
             bubble.pack(side="left", anchor="w")
 
+        self.message_labels.append(bubble)
+        self._refresh_wrap_lengths()
         self._scroll_to_bottom()
         return bubble
 
@@ -331,11 +337,17 @@ class ClippyApp(tk.Tk):
         width = max(self.winfo_width(), 420)
         return max(220, width - 160)
 
+    def _refresh_wrap_lengths(self) -> None:
+        wrap_length = self._get_wrap_length()
+        for label in self.message_labels:
+            label.configure(wraplength=wrap_length)
+
     def _on_frame_configure(self, event) -> None:
         self.chat_canvas.configure(scrollregion=self.chat_canvas.bbox("all"))
 
     def _on_canvas_configure(self, event) -> None:
         self.chat_canvas.itemconfigure(self.canvas_window, width=event.width)
+        self._refresh_wrap_lengths()
 
     def _on_mousewheel(self, event) -> None:
         if event.delta:
@@ -343,10 +355,19 @@ class ClippyApp(tk.Tk):
 
     def _capture_screenshot(self) -> bytes:
         bbox = self._get_current_monitor_bbox()
-        if bbox is None:
-            image = ImageGrab.grab()
-        else:
-            image = ImageGrab.grab(bbox=bbox, all_screens=True)
+        was_visible = self.state() != "withdrawn"
+        if was_visible:
+            self.withdraw()
+            self.update_idletasks()
+        try:
+            if bbox is None:
+                image = ImageGrab.grab()
+            else:
+                image = ImageGrab.grab(bbox=bbox, all_screens=True)
+        finally:
+            if was_visible:
+                self.deiconify()
+                self.update_idletasks()
         buffer = io.BytesIO()
         image.save(buffer, format="PNG")
         return buffer.getvalue()
