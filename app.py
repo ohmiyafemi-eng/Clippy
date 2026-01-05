@@ -22,7 +22,10 @@ MODEL_ENV = "MISTRAL_MODEL"
 
 SYSTEM_PROMPT = (
     "You are in an app that revives Microsoft Clippy in Windows. "
-    "Speak in a Clippy style."
+    "Speak in a Clippy style. "
+    "You are a professional assistant for long-term care pharmacy workflows. "
+    "Keep responses short and easy to understand. "
+    "If a screenshot includes dollar values, respond as the Director of Finance."
 )
 
 
@@ -339,10 +342,64 @@ class ClippyApp(tk.Tk):
             self.chat_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
     def _capture_screenshot(self) -> bytes:
-        image = ImageGrab.grab()
+        bbox = self._get_current_monitor_bbox()
+        if bbox is None:
+            image = ImageGrab.grab()
+        else:
+            image = ImageGrab.grab(bbox=bbox, all_screens=True)
         buffer = io.BytesIO()
         image.save(buffer, format="PNG")
         return buffer.getvalue()
+
+    def _get_current_monitor_bbox(self) -> tuple[int, int, int, int] | None:
+        if os.name != "nt":
+            return None
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            class RECT(ctypes.Structure):
+                _fields_ = [
+                    ("left", wintypes.LONG),
+                    ("top", wintypes.LONG),
+                    ("right", wintypes.LONG),
+                    ("bottom", wintypes.LONG),
+                ]
+
+            class MONITORINFO(ctypes.Structure):
+                _fields_ = [
+                    ("cbSize", wintypes.DWORD),
+                    ("rcMonitor", RECT),
+                    ("rcWork", RECT),
+                    ("dwFlags", wintypes.DWORD),
+                ]
+
+            monitor_from_point = ctypes.windll.user32.MonitorFromPoint
+            monitor_from_window = ctypes.windll.user32.MonitorFromWindow
+            get_monitor_info = ctypes.windll.user32.GetMonitorInfoW
+            monitor_from_point.argtypes = [wintypes.POINT, wintypes.DWORD]
+            monitor_from_point.restype = wintypes.HMONITOR
+            monitor_from_window.argtypes = [wintypes.HWND, wintypes.DWORD]
+            monitor_from_window.restype = wintypes.HMONITOR
+            get_monitor_info.argtypes = [wintypes.HMONITOR, ctypes.POINTER(MONITORINFO)]
+            get_monitor_info.restype = wintypes.BOOL
+
+            hwnd = wintypes.HWND(self.winfo_id())
+            monitor = monitor_from_window(hwnd, 2)
+            if not monitor:
+                x = self.winfo_rootx() + self.winfo_width() // 2
+                y = self.winfo_rooty() + self.winfo_height() // 2
+                point = wintypes.POINT(x, y)
+                monitor = monitor_from_point(point, 2)
+            if not monitor:
+                return None
+            info = MONITORINFO()
+            info.cbSize = ctypes.sizeof(MONITORINFO)
+            if not get_monitor_info(monitor, ctypes.byref(info)):
+                return None
+            return (info.rcMonitor.left, info.rcMonitor.top, info.rcMonitor.right, info.rcMonitor.bottom)
+        except Exception:
+            return None
 
     def _to_data_url(self, image_bytes: bytes) -> str:
         encoded = base64.b64encode(image_bytes).decode("ascii")
