@@ -181,6 +181,7 @@ class ClippyApp(tk.Tk):
         self.messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
         self._build_ui()
+        self._show_welcome_message()
 
     def _build_ui(self) -> None:
         self.columnconfigure(0, weight=1)
@@ -239,6 +240,17 @@ class ClippyApp(tk.Tk):
             fg="#5c667a",
         )
         self.token_label.grid(row=0, column=0, sticky="w")
+
+    def _show_welcome_message(self) -> None:
+        message = (
+            "Hi there! How may I help you today?\n"
+            "Tip: drag this Clippy window onto the screen you want to capture, then click Screenshot.\n"
+            "I can answer questions, summarize screenshots, or help with pharmacy workflows.\n"
+            "If you're preparing for the ops call, feel free to snap the pharmacy management dashboard "
+            "and I can guide you from there."
+        )
+        self._add_message(message, is_user=False)
+        self.messages.append({"role": "assistant", "content": message})
 
     def _on_send(self, event=None) -> None:
         prompt = self.input_var.get().strip()
