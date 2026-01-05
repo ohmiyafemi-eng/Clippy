@@ -164,7 +164,7 @@ class ClippyApp(tk.Tk):
     def __init__(self, client: FoundryClient, avatar_path: Path | None = None) -> None:
         super().__init__()
         self.client = client
-        self.title("Clippy (Python)")
+        self.title("Clippy")
         self.geometry("420x640")
         self.configure(bg="#f4f6fb")
 
@@ -186,16 +186,13 @@ class ClippyApp(tk.Tk):
     def _build_ui(self) -> None:
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=0)
-        self.rowconfigure(1, weight=1)
-
-        header = tk.Label(self, text="Clippy", font=("Segoe UI", 16, "bold"), bg=self.bg_color, fg="#2a3345")
-        header.grid(row=0, column=0, padx=12, pady=(12, 6), sticky="w")
+        self.rowconfigure(0, weight=1)
 
         self.chat_canvas = tk.Canvas(self, bg=self.bg_color, highlightthickness=0)
-        self.chat_canvas.grid(row=1, column=0, padx=12, pady=(0, 8), sticky="nsew")
+        self.chat_canvas.grid(row=0, column=0, padx=12, pady=(4, 8), sticky="nsew")
 
         self.chat_scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.chat_canvas.yview)
-        self.chat_scrollbar.grid(row=1, column=1, pady=(0, 8), sticky="ns")
+        self.chat_scrollbar.grid(row=0, column=1, pady=(4, 8), sticky="ns")
         self.chat_canvas.configure(yscrollcommand=self.chat_scrollbar.set)
 
         self.messages_frame = tk.Frame(self.chat_canvas, bg=self.bg_color)
@@ -205,7 +202,7 @@ class ClippyApp(tk.Tk):
         self.chat_canvas.bind_all("<MouseWheel>", self._on_mousewheel)
 
         input_frame = ttk.Frame(self)
-        input_frame.grid(row=2, column=0, padx=12, pady=(0, 12), sticky="ew")
+        input_frame.grid(row=1, column=0, padx=12, pady=(0, 12), sticky="ew")
         input_frame.columnconfigure(0, weight=1)
         input_frame.columnconfigure(1, weight=0)
 
@@ -230,7 +227,7 @@ class ClippyApp(tk.Tk):
         send_button.grid(row=0, column=1)
 
         status_frame = tk.Frame(self, bg=self.bg_color)
-        status_frame.grid(row=3, column=0, padx=12, pady=(0, 10), sticky="ew")
+        status_frame.grid(row=2, column=0, padx=12, pady=(0, 10), sticky="ew")
         status_frame.columnconfigure(0, weight=1)
         self.token_label = tk.Label(
             status_frame,
@@ -243,11 +240,14 @@ class ClippyApp(tk.Tk):
 
     def _show_welcome_message(self) -> None:
         message = (
-            "Hi there! How may I help you today?\n"
-            "Tip: drag this Clippy window onto the screen you want to capture, then click Screenshot.\n"
-            "I can answer questions, summarize screenshots, or help with pharmacy workflows.\n"
-            "If you're preparing for the ops call, feel free to snap the pharmacy management dashboard "
-            "and I can guide you from there."
+            "Hi there! 👋 I'm here to help.\n"
+            "\n"
+            "Here are a few things you can do:\n"
+            "• Ask a question or request a quick summary.\n"
+            "• Click Screenshot to capture the screen you're working on.\n"
+            "• Share a dashboard and I can walk you through the key insights.\n"
+            "\n"
+            "Tip: drag this window onto the screen you want to capture before taking a screenshot."
         )
         self._add_message(message, is_user=False)
         self.messages.append({"role": "assistant", "content": message})
